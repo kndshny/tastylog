@@ -1,1 +1,6 @@
-SELECT * FROM t_shop WHERE id = ?
+SELECT
+  *
+FROM
+  t_shop
+WHERE
+  id = ?
