@@ -26,11 +26,10 @@ app.use('/public', express.static(path.join(__dirname, '/public')));
 app.use(accesslogger())
 
 // Dynamic resource rooting
+app.use('/shops', require('./routes/shops.js'))
 app.use('/', require('./routes/index.js'));
 
-
 // Set application log
-app.use('/shops', require('./routes/shops.js'))
 app.use(applicationlogger())
 
 // Execute web application
