@@ -18,7 +18,6 @@ Promise.all([
     data.reviews = results[1] || []
     res.render('./shops/index.ejs', data)
   }).catch((err) => {
-    console.error(err)
     next(err)
   })
 });
