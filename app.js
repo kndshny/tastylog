@@ -25,11 +25,14 @@ app.use('/public', express.static(path.join(__dirname, '/public')));
 // Set access log
 app.use(accesslogger())
 
+//Set middleware
+app.use(express.urlencoded({ extended: true }))
+
 // Dynamic resource rooting
+app.use('/account', require('./routes/account.js'))
 app.use('/search', require('./routes/search.js'))
 app.use('/shops', require('./routes/shops.js'))
 app.use('/', require('./routes/index.js'));
-
 
 // Set application log
 app.use(applicationlogger())
