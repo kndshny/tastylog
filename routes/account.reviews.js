@@ -1,11 +1,12 @@
 const router = require('express').Router();
 const { MySQLClient, sql } = require('../lib/database/client.js');
 const moment = require('moment');
+const tokens = new (require('csrf'))();
 const DATE_FORMAT = 'YYYY/MM/DD';
 
-var validateReviewData = function (req) {
-	var body = req.body;
-	var isValid = true,
+let validateReviewData = function (req) {
+	let body = req.body;
+	let isValid = true,
 		error = {};
 
 	if (body.visit && !moment(body.visit, DATE_FORMAT).isValid()) {
@@ -19,8 +20,8 @@ var validateReviewData = function (req) {
 	return error;
 };
 
-var createReviewData = function (req) {
-	var body = req.body,
+let createReviewData = function (req) {
+	let body = req.body,
 		date;
 
 	return {
@@ -36,8 +37,13 @@ var createReviewData = function (req) {
 };
 
 router.get('/regist/:shopId(\\d+)', async (req, res, next) => {
-	var shopId = req.params.shopId;
-	var shop, shopName, review, results;
+	let shopId = req.params.shopId;
+	let secret, token, shop, shopName, review, results;
+
+	secret = await tokens.secret();
+	token = tokens.create(secret);
+	req.session._csrf = secret;
+	res.cookie('_csrf', token);
 
 	try {
 		results = await MySQLClient.executeQuery(
@@ -58,15 +64,15 @@ router.get('/regist/:shopId(\\d+)', async (req, res, next) => {
 });
 
 router.post('/regist/:shopId(\\d+)', async (req, res, next) => {
-	var review = createReviewData(req);
-	var { shopId, shopName } = req.body;
+	let review = createReviewData(req);
+	let { shopId, shopName } = req.body;
 	res.render('./account/reviews/regist-form.ejs', { shopId, shopName, review });
 });
 
 router.post('/regist/confirm', (req, res) => {
-	var error = validateReviewData(req);
-	var review = createReviewData(req);
-	var { shopId, shopName } = req.body;
+	let error = validateReviewData(req);
+	let review = createReviewData(req);
+	let { shopId, shopName } = req.body;
 
 	if (error) {
 		res.render('./account/reviews/regist-form.ejs', {
@@ -86,11 +92,19 @@ router.post('/regist/confirm', (req, res) => {
 });
 
 router.post('/regist/execute', async (req, res, next) => {
-	var error = validateReviewData(req);
-	var review = createReviewData(req);
-	var { shopId, shopName } = req.body;
-	var userId = '1'; // TODO: ログイン実装後に更新
-	var transaction;
+	let secret = req.session._csrf;
+	let token = req.cookies._csrf;
+
+	if (tokens.verify(secret, token) === false) {
+		next(new Error('Invalid Token.'));
+		return;
+	}
+
+	let error = validateReviewData(req);
+	let review = createReviewData(req);
+	let { shopId, shopName } = req.body;
+	let userId = '1'; // TODO: ログイン実装後に更新
+	let transaction;
 
 	if (error) {
 		res.render('./account/reviews/regist-form.ejs', {
@@ -124,7 +138,16 @@ router.post('/regist/execute', async (req, res, next) => {
 		next(err);
 	}
 
-	res.render('./account/reviews/regist-complete.ejs', { shopId });
+	delete req.session._csrf;
+	res.clearCookie('_csrf');
+
+	res.redirect(`/account/reviews/regist/complete?shopId=${shopId}`);
+});
+
+router.get('/regist/complete', (req, res) => {
+	res.render('./account/reviews/regist-complete.ejs', {
+		shopId: req.query.shopId,
+	});
 });
 
 module.exports = router;
