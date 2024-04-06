@@ -30,6 +30,7 @@ app.use('/search', require('./routes/search.js'))
 app.use('/shops', require('./routes/shops.js'))
 app.use('/', require('./routes/index.js'));
 
+
 // Set application log
 app.use(applicationlogger())
 
